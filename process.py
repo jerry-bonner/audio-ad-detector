@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import re
 from typing import List, Dict
 import os
+import json
 
 def parse_vtt_to_sentences(vtt_text: str) -> List[Dict[str, str]]:
     lines = vtt_text.strip().splitlines()
@@ -82,4 +83,5 @@ if __name__ == "__main__":
               if response.output_text == "True":
                   sentence["is_ad"] = True
 
-          print(sentences)
+          with open("sentences.json", "w") as f:
+              json.dump(sentences, f)
