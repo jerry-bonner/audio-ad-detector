@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 import re
 from typing import List, Dict
 import os
-import json
 
 def parse_vtt_to_sentences(vtt_text: str) -> List[Dict[str, str]]:
     lines = vtt_text.strip().splitlines()
@@ -62,26 +61,35 @@ if __name__ == "__main__":
 
   with open("audio.mp3", "rb") as audio_file:
       transcript = client.audio.transcriptions.create(model="whisper-1", file=audio_file, response_format="vtt")
-      
+
+
       if transcript:
           sentences = parse_vtt_to_sentences(transcript)
-          for sentence in sentences:
+          for i, sentence in enumerate(sentences):
+              # Get context sentences (previous and next)
+              prev_sentence = sentences[i-1]["text"] if i > 0 else "None"
+              next_sentence = sentences[i+1]["text"] if i < len(sentences)-1 else "None"
+              
               response = client.responses.create(
                 model="o3-mini",
                 input=[
                   {
                       "role": "system",
-                      "content": "You are an assistant that determines if a sentence from a podcast is an advertistement or not. You will be given the timestamp of the sentence and the sentence itself. Your output must be a boolean value. 'True' if it is an advertistement, 'False' if it is not. No other output is allowed."},
+                      "content": "You are an assistant that determines if a sentence from a \
+                        podcast is an advertistement or not. You will be given the timestamp of \
+                        the sentence, the sentence itself, and the sentences before and after it \
+                        for context. Your output must be a boolean value. 'True' if it is an \
+                        advertistement, 'False' if it is not. No other output is allowed. If \
+                        there are no before or after sentences, 'None' will be indicated.",
+                  },
                   {
                       "role": "user",
-                      "content": f"start:{sentence['start']} stop:{sentence['end']} sentence:{sentence['text']}"
+                      "content": f"start:{sentence['start']} stop:{sentence['end']}\nPrevious sentence: {prev_sentence}\nCurrent sentence: {sentence['text']}\nNext sentence: {next_sentence}"
                   }
                 ]
-              
               )
 
               if response.output_text == "True":
                   sentence["is_ad"] = True
 
-          with open("sentences.json", "w") as f:
-              json.dump(sentences, f)
+          print(sentences)
